@@ -56,7 +56,7 @@ def get_parser():
     parser.add_argument("--rgb_pcd_path", type=str, default=None)
     parser.add_argument("--edge_file", type=str, default=None)
     
-    parser.add_argument("--no_clip", action="store_true", 
+    parser.add_argument("--clip", action="store_true", 
                         help="If set, the CLIP model will not init for fast debugging.")
     
     # To inspect the results of merge_overlap_objects
@@ -68,6 +68,49 @@ def get_parser():
     parser.add_argument("--obj_min_detections", type=int, default=0)
     
     return parser
+
+class Node:
+    def __init__(self, class_name, id, **attributes):
+        self.class_name = class_name
+        self.id = id  # Unique identifier for the node
+        self.attributes = attributes  # Dictionary of additional attributes
+
+    def identifier(self):
+        return f"{self.class_name}_{str(self.id)[:5]}"
+
+    def __repr__(self):
+        return f"Node({self.class_name}, {self.id}, {self.attributes})"
+    
+class Edge:
+    def __init__(self, source, target, **attributes):
+        self.source = source  # Source node identifier
+        self.target = target  # Target node identifier
+        self.attributes = attributes  # Dictionary of additional attributes
+
+    def __repr__(self):
+        return f"Edge({self.source} -> {self.target}, {self.attributes})"
+
+def graphCreation(objects):
+    G = nx.Graph()
+    nodes = []
+    edges = []
+    for idx, object in enumerate(objects):
+
+        node = Node(class_name=object['class_name'], id=object['id'])
+        nodes.append(node)
+        G.add_node(node.identifier(), **node.attributes)
+        #G.add_node(str(object['class_name']) + "_"+ str(object['id'])[:5])
+        if idx != 0:
+            #G.add_edge(idx-1,idx)
+            edge = Edge(source=nodes[idx - 1].identifier(), target=node.identifier())
+            edges.append(edge)
+            G.add_edge(edge.source, edge.target, **edge.attributes)
+
+    plt.figure(figsize=(8, 6))  # Set the figure size
+    pos = nx.spring_layout(G)  # Use spring layout for positioning the nodes
+    nx.draw(G, pos, with_labels=True, node_color="skyblue", node_size=100, font_size=16, font_color="black", font_weight="bold", edge_color="gray")
+    plt.title("Graph Visualization", fontsize=20)
+    plt.show()
 
 def load_result(result_path):
     # check if theres a potential symlink for result_path and resolve it
@@ -89,10 +132,7 @@ def load_result(result_path):
         bg_objects = None
     class_colors = results['class_colors']
 
-    # G = nx.Graph()
-    # i = 0
-    # for idx, object in enumerate(objects):
-    #     G.add_node()
+    graphCreation(objects)
         
     return objects, bg_objects, class_colors
 
@@ -153,7 +193,7 @@ def main(args):
 
             scene_graph_geometries.extend(line_mesh.cylinder_segments)
     
-    if not args.no_clip:
+    if args.clip:
         print("Initializing CLIP model...")
         clip_model, _, clip_preprocess = open_clip.create_model_and_transforms("ViT-H-14", "laion2b_s32b_b79k")
         clip_model = clip_model.to("cuda")
@@ -283,51 +323,53 @@ def main(args):
             vis.update_geometry(pcd)
         
     def color_by_clip_sim(vis):
-        if args.no_clip:
+
+        if args.clip:
+            text_query = input("Enter your query: ")
+            text_queries = [text_query]
+        
+            text_queries_tokenized = clip_tokenizer(text_queries).to("cuda")
+            text_query_ft = clip_model.encode_text(text_queries_tokenized)
+            text_query_ft = text_query_ft / text_query_ft.norm(dim=-1, keepdim=True)
+            text_query_ft = text_query_ft.squeeze()
+        
+            # similarities = objects.compute_similarities(text_query_ft)
+            objects_clip_fts = objects.get_stacked_values_torch("clip_ft")
+            objects_clip_fts = objects_clip_fts.to("cuda")
+            similarities = F.cosine_similarity(
+                text_query_ft.unsqueeze(0), objects_clip_fts, dim=-1
+            )
+            max_value = similarities.max()
+            min_value = similarities.min()
+            normalized_similarities = (similarities - min_value) / (max_value - min_value)
+            probs = F.softmax(similarities, dim=0)
+            max_prob_idx = torch.argmax(probs)
+            similarity_colors = cmap(normalized_similarities.detach().cpu().numpy())[..., :3]
+
+            max_prob_object = objects[max_prob_idx]
+            print(f"Most probable object is at index {max_prob_idx} with class name '{max_prob_object['class_name']}'")
+            print(f"location xyz: {max_prob_object['bbox'].center}")
+        
+            for i in range(len(objects)):
+                pcd = pcds[i]
+                map_colors = np.asarray(pcd.colors)
+                pcd.colors = o3d.utility.Vector3dVector(
+                    np.tile(
+                        [
+                            similarity_colors[i, 0].item(),
+                            similarity_colors[i, 1].item(),
+                            similarity_colors[i, 2].item()
+                        ], 
+                        (len(pcd.points), 1)
+                    )
+                )
+
+            for pcd in pcds:
+                vis.update_geometry(pcd)
+        else:
             print("CLIP model is not initialized.")
             return
 
-        text_query = input("Enter your query: ")
-        text_queries = [text_query]
-        
-        text_queries_tokenized = clip_tokenizer(text_queries).to("cuda")
-        text_query_ft = clip_model.encode_text(text_queries_tokenized)
-        text_query_ft = text_query_ft / text_query_ft.norm(dim=-1, keepdim=True)
-        text_query_ft = text_query_ft.squeeze()
-        
-        # similarities = objects.compute_similarities(text_query_ft)
-        objects_clip_fts = objects.get_stacked_values_torch("clip_ft")
-        objects_clip_fts = objects_clip_fts.to("cuda")
-        similarities = F.cosine_similarity(
-            text_query_ft.unsqueeze(0), objects_clip_fts, dim=-1
-        )
-        max_value = similarities.max()
-        min_value = similarities.min()
-        normalized_similarities = (similarities - min_value) / (max_value - min_value)
-        probs = F.softmax(similarities, dim=0)
-        max_prob_idx = torch.argmax(probs)
-        similarity_colors = cmap(normalized_similarities.detach().cpu().numpy())[..., :3]
-
-        max_prob_object = objects[max_prob_idx]
-        print(f"Most probable object is at index {max_prob_idx} with class name '{max_prob_object['class_name']}'")
-        print(f"location xyz: {max_prob_object['bbox'].center}")
-        
-        for i in range(len(objects)):
-            pcd = pcds[i]
-            map_colors = np.asarray(pcd.colors)
-            pcd.colors = o3d.utility.Vector3dVector(
-                np.tile(
-                    [
-                        similarity_colors[i, 0].item(),
-                        similarity_colors[i, 1].item(),
-                        similarity_colors[i, 2].item()
-                    ], 
-                    (len(pcd.points), 1)
-                )
-            )
-
-        for pcd in pcds:
-            vis.update_geometry(pcd)
             
     def save_view_params(vis):
         param = vis.get_view_control().convert_to_pinhole_camera_parameters()
