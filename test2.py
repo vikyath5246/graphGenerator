@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-# Dictionary of nodes with coordinates
+# Original nodes (for brevity, we assume they are already defined as in the previous code)
 nodes = {
     'stool_2446b': ['stool', [1.7988970171940815, 0.6628147375042005, -1.2393224694867078]],
     'stool_7e953': ['stool', [1.8305892683722957, 1.5230015299088804, -1.2473324219606476]],
@@ -29,7 +29,7 @@ nodes = {
     'end table_7cb21': ['end table', [2.325120235584508, -0.5942881588533708, -1.4829396985840453]],
     'sofa chair_3552f': ['sofa chair', [1.4484863518218778, 2.7736593516531522, -1.4959179552889308]],
     'lamp_0c8b7': ['lamp', [1.95548847877268, -0.8341979816260381, -0.3501052349596587]],
-    'pillow_e603f': ['pillow', [2.8489039132371565, 2.4930974851120906, -0.819454510890856]], 
+    'pillow_e603f': ['pillow', [2.8489039132371565, 2.4930974851120906, -0.819454510890856]],
     'pillow_c55a8': ['pillow', [3.761496128513835, -0.6778734933473642, -0.8177636061731359]],
     'pillow_6fbed': ['pillow', [4.030930918914593, -0.5264944338894206, -0.8388997849291183]],
     'pillow_3f9b7': ['pillow', [4.32234031853095, -0.4309148863140728, -0.8315622071331413]],
@@ -45,7 +45,7 @@ nodes = {
     'potted plant_1104f': ['potted plant', [4.025801622663858, 1.0735774962893083, -0.6984122215825678]],
     'radiator_7db5c': ['radiator', [6.696780466740646, -0.6412594260484688, -0.9750198353623569]],
     'coffee table_cc0ec': ['coffee table', [5.555558641474217, -0.16178294880352456, -1.4786782542523782]],
-    'chair_c870e': ['chair', [5.683722536307596, 1.159830821079132, -0.7466787313700952]],
+    'chair_c870e': ['chair', [5.683722536307596, 1.159830821079132, -0.7466787313700952]], # original location
     'pillow_0560d': ['pillow', [5.877986476428022, 1.4802950826984416, -0.8770623761929788]],
     'armchair_e9853': ['armchair', [5.720741729894924, 1.4969428272952046, -0.871604444690494]],
     'lamp_28f24': ['lamp', [5.180241604698308, 2.7549703053815615, -0.2034317792734612]],
@@ -65,8 +65,8 @@ nodes = {
     'lamp_7fbca': ['lamp', [6.179270255620318, 3.411013104476472, -0.3054937926951259]]
 }
 
-# Expanded list of edges with relationship type
-edges = [
+# Pre-defined relationships from before the move
+old_edges = [
     ('book_9f457', 'cabinet_75ccf', 'on'),
     ('coffee kettle_ecf03', 'toaster_30f22', 'near'),
     ('closet door_7d3d9', 'closet door_ca69b', 'beside'),
@@ -89,6 +89,27 @@ edges = [
     ('paper bag_f1a6f', 'sofa chair_3552f', 'near')
 ]
 
+# Move the chair closer to coffee table_cc0ec
+nodes['chair_c870e'][1] = [5.58, -0.2, -0.75]  # updated coordinates
+
+# After the move, determine new relationships
+# Check proximity of chair_c870e to coffee table_cc0ec
+chair_coord = nodes['chair_c870e'][1]
+table_coord = nodes['coffee table_cc0ec'][1]
+
+dist = ((chair_coord[0]-table_coord[0])**2 + (chair_coord[1]-table_coord[1])**2)**0.5
+# If within a small threshold, consider them "near"
+if dist < 0.5:
+    # Add a new relationship if it didn't exist before
+    new_relationship = ('chair_c870e', 'coffee table_cc0ec', 'near')
+else:
+    new_relationship = None
+
+# Update the edges: add the new relationship if it doesn't conflict
+new_edges = old_edges[:]
+if new_relationship and new_relationship not in new_edges:
+    new_edges.append(new_relationship)
+
 coords = {node: data[1] for node, data in nodes.items()}
 
 fig = plt.figure(figsize=(12, 10))
@@ -105,7 +126,7 @@ for node, (obj_class, (x, y, z)) in nodes.items():
     ax.text(x, y, z, node, size=6, zorder=1, color='black')
 
 # Draw edges with relationship labels
-for n1, n2, rel in edges:
+for n1, n2, rel in new_edges:
     x_line = [coords[n1][0], coords[n2][0]]
     y_line = [coords[n1][1], coords[n2][1]]
     z_line = [coords[n1][2], coords[n2][2]]
@@ -120,7 +141,12 @@ for n1, n2, rel in edges:
 ax.set_xlabel('X')
 ax.set_ylabel('Y')
 ax.set_zlabel('Z')
-ax.set_title('3D Visualization of Nodes and Enhanced Relationships')
+ax.set_title('3D Visualization After Moving the Chair Closer to the Table')
 
 plt.tight_layout()
 plt.show()
+
+# Print changes in relationships
+print("Changes in relationships due to the chair movement:")
+print("Added relationship:", new_relationship if new_relationship else "None")
+print("No relationships were removed.")

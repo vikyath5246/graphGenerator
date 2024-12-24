@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-# Dictionary of nodes with coordinates
+# Assuming nodes is already defined as previously:
 nodes = {
     'stool_2446b': ['stool', [1.7988970171940815, 0.6628147375042005, -1.2393224694867078]],
     'stool_7e953': ['stool', [1.8305892683722957, 1.5230015299088804, -1.2473324219606476]],
@@ -29,7 +29,7 @@ nodes = {
     'end table_7cb21': ['end table', [2.325120235584508, -0.5942881588533708, -1.4829396985840453]],
     'sofa chair_3552f': ['sofa chair', [1.4484863518218778, 2.7736593516531522, -1.4959179552889308]],
     'lamp_0c8b7': ['lamp', [1.95548847877268, -0.8341979816260381, -0.3501052349596587]],
-    'pillow_e603f': ['pillow', [2.8489039132371565, 2.4930974851120906, -0.819454510890856]], 
+    'pillow_e603f': ['pillow', [2.8489039132371565, 2.4930974851120906, -0.819454510890856]],
     'pillow_c55a8': ['pillow', [3.761496128513835, -0.6778734933473642, -0.8177636061731359]],
     'pillow_6fbed': ['pillow', [4.030930918914593, -0.5264944338894206, -0.8388997849291183]],
     'pillow_3f9b7': ['pillow', [4.32234031853095, -0.4309148863140728, -0.8315622071331413]],
@@ -45,7 +45,8 @@ nodes = {
     'potted plant_1104f': ['potted plant', [4.025801622663858, 1.0735774962893083, -0.6984122215825678]],
     'radiator_7db5c': ['radiator', [6.696780466740646, -0.6412594260484688, -0.9750198353623569]],
     'coffee table_cc0ec': ['coffee table', [5.555558641474217, -0.16178294880352456, -1.4786782542523782]],
-    'chair_c870e': ['chair', [5.683722536307596, 1.159830821079132, -0.7466787313700952]],
+    # Chair moved closer to the coffee table
+    'chair_c870e': ['chair', [5.58, -0.2, -0.75]],
     'pillow_0560d': ['pillow', [5.877986476428022, 1.4802950826984416, -0.8770623761929788]],
     'armchair_e9853': ['armchair', [5.720741729894924, 1.4969428272952046, -0.871604444690494]],
     'lamp_28f24': ['lamp', [5.180241604698308, 2.7549703053815615, -0.2034317792734612]],
@@ -65,31 +66,13 @@ nodes = {
     'lamp_7fbca': ['lamp', [6.179270255620318, 3.411013104476472, -0.3054937926951259]]
 }
 
-# Expanded list of edges with relationship type
-edges = [
-    ('book_9f457', 'cabinet_75ccf', 'on'),
-    ('coffee kettle_ecf03', 'toaster_30f22', 'near'),
-    ('closet door_7d3d9', 'closet door_ca69b', 'beside'),
-    ('lamp_be40f', 'end table_4bf61', 'on'),
-    ('cup_41fb6', 'coffee table_2d6ac', 'on'),
-    ('bottle_0f910', 'coffee table_2d6ac', 'on'),
-    ('potted plant_1104f', 'coffee table_2d6ac', 'on'),
-    ('pillow_fa026', 'couch_a78e1', 'on'),
-    ('pillow_39334', 'couch_a78e1', 'on'),
-    ('pillow_4095e', 'couch_a78e1', 'on'),
-    ('pillow_b6e7e', 'couch_a78e1', 'on'),
-    ('pillow_db103', 'armchair_d9749', 'on'),
-    ('book_ec5b3', 'end table_e1bd2', 'on'),
-    ('pillow_22515', 'armchair_d9749', 'on'),
-    ('pillow_0560d', 'armchair_e9853', 'on'),
-    ('pillow_42e7c', 'end table_4bf61', 'near'),
-    ('light switch_90852', 'power outlet_52c48', 'next to'),
-    ('sofa chair_b11c9', 'coffee table_cc0ec', 'near'),
-    ('armchair_d9749', 'coffee table_cc0ec', 'near'),
-    ('paper bag_f1a6f', 'sofa chair_3552f', 'near')
-]
-
 coords = {node: data[1] for node, data in nodes.items()}
+
+# Let's define the changed edges. 
+# From the previous scenario, we know we added (chair_c870e, coffee table_cc0ec, 'near')
+# No edges were removed.
+added_edges = [('chair_c870e', 'coffee table_cc0ec', 'near')]
+removed_edges = []  # None removed in this scenario
 
 fig = plt.figure(figsize=(12, 10))
 ax = fig.add_subplot(111, projection='3d')
@@ -104,23 +87,35 @@ ax.scatter(xs, ys, zs, c='b', marker='o', s=100, alpha=0.6)
 for node, (obj_class, (x, y, z)) in nodes.items():
     ax.text(x, y, z, node, size=6, zorder=1, color='black')
 
-# Draw edges with relationship labels
-for n1, n2, rel in edges:
+# Plot changed edges:
+# Added edges in green
+for n1, n2, rel in added_edges:
     x_line = [coords[n1][0], coords[n2][0]]
     y_line = [coords[n1][1], coords[n2][1]]
     z_line = [coords[n1][2], coords[n2][2]]
-    ax.plot(x_line, y_line, z_line, c='r', linewidth=1)
-    
-    # Place relationship text roughly midway along the edge
+    ax.plot(x_line, y_line, z_line, c='g', linewidth=2)
+    # Label the relationship
     mid_x = (x_line[0] + x_line[1]) / 2
     mid_y = (y_line[0] + y_line[1]) / 2
     mid_z = (z_line[0] + z_line[1]) / 2
-    ax.text(mid_x, mid_y, mid_z, rel, size=9, color='red')
+    ax.text(mid_x, mid_y, mid_z, rel, size=9, color='green')
+
+# Removed edges in red (none in this case)
+for n1, n2, rel in removed_edges:
+    x_line = [coords[n1][0], coords[n2][0]]
+    y_line = [coords[n1][1], coords[n2][1]]
+    z_line = [coords[n1][2], coords[n2][2]]
+    ax.plot(x_line, y_line, z_line, c='r', linewidth=2)
+    # Label the relationship
+    mid_x = (x_line[0] + x_line[1]) / 2
+    mid_y = (y_line[0] + y_line[1]) / 2
+    mid_z = (z_line[0] + z_line[1]) / 2
+    ax.text(mid_x, mid_y, mid_z, rel, size=7, color='red')
 
 ax.set_xlabel('X')
 ax.set_ylabel('Y')
 ax.set_zlabel('Z')
-ax.set_title('3D Visualization of Nodes and Enhanced Relationships')
+ax.set_title('Nodes and Changed Edges After Moving the Chair Closer to the Table')
 
 plt.tight_layout()
 plt.show()
