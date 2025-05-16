@@ -13,7 +13,7 @@ In this code we have three ways to generate relationships (all the code resides 
 - Through local LLMs (Mistral, Llama3)
 - Through Heuristics
 
-> **Note**: ShapeLLM doesn't work for our use‑case, as it has awareness of the object but not the scene. Usage of shapeLLM can be found on [text](https://huggingface.co/qizekun/ShapeLLM_7B_gapartnet_v1.0)
+> **Note**: ShapeLLM doesn't work for our use‑case, as it has awareness of the object but not the scene. Usage of shapeLLM can be found on [this link](https://huggingface.co/qizekun/ShapeLLM_7B_gapartnet_v1.0)
 
 ### Relationship building workflow
 
@@ -48,7 +48,7 @@ Example:
 python3 mesh.py --result_path ./pcd_r_mapping_stride10.pkl.gz
 ```
 
-Sample result files can be found here: [text](https://drive.google.com/drive/folders/1pPe23aHm4aEgwe-HOQJHRvp-Z8Olq5ia?usp=sharing)
+Sample result files can be found here: [Link](https://drive.google.com/drive/folders/1pPe23aHm4aEgwe-HOQJHRvp-Z8Olq5ia?usp=sharing)
 
 ## Future steps
 
