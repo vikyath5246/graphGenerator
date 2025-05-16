@@ -3,7 +3,8 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 from utils.llm import initial_graph_relations, relations_update
-from utils.shapellm import initial_graph_shapellm
+from utils.heuristics import graph_relations
+# from utils.shapellm import initial_graph_shapellm
 
 class Node:
     def __init__(self, class_name, id, **attributes):
@@ -32,6 +33,7 @@ def graphCreation(objects):
     edges = []
 
     dic = {}
+    bbx = {}
     pcds = {}
     for idx, obj in enumerate(objects):
         center_coordinates = obj['bbox'].center.tolist() if 'bbox' in obj else [0, 0, 0]
@@ -41,23 +43,24 @@ def graphCreation(objects):
         center = np.mean(points, axis=0)
         nodes.append(node)
         G.add_node(node.identifier(), **node.attributes)
-
+        bbx[f"{obj['class_name']}_{str(obj['id'])[:5]}"] = [obj['class_name'], obj['bbox']]
         dic[f"{obj['class_name']}_{str(obj['id'])[:5]}"] = [obj['class_name'], center]
         pcds[f"{obj['class_name']}_{str(obj['id'])[:5]}"] = [obj['class_name'], center, pcd]
-    print("Dic starts here", dic, "Dic ends here")
+    print("Dic starts here", bbx, "Dic ends here")
 
-    relationships = initial_graph_relations(dic)
-    print("api relationships start", relationships, "api relationships end")
+    # relationships = initial_graph_relations(dic)
+    # print("api relationships start", relationships, "api relationships end")
 
-    relations_shapellm = initial_graph_shapellm(pcds)
-    print("shapellm relations start", relations_shapellm, "shapellm relations end")
+    # # relations_shapellm = initial_graph_shapellm(pcds)
+    # # print("shapellm relations start", relations_shapellm, "shapellm relations end")
 
-    for relationship in relationships:
-        source_id, target_id, relation = relationship
-        if source_id in G and target_id in G:
-            G.add_edge(source_id, target_id, relationship=relation)
-    #print(dic)
-    return G
+    # for relationship in relationships:
+    #     source_id, target_id, relation = relationship
+    #     if source_id in G and target_id in G:
+    #         G.add_edge(source_id, target_id, relationship=relation)
+    # #print(dic)
+    # return G
+    return graph_relations(bbx)
 
 def process_action(G, action):
     # List to store edge details
